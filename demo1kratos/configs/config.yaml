@@ -5,6 +5,9 @@ server:
   grpc:
     address: 0.0.0.0:9001
     timeout: 1s
+  auth:
+    adminToken: "63a16b29e5bc4a28a880de1b2e707cc6"
+    guestToken: "863676f1118c45c7add65b4adefd94dd"
 data:
   database:
     driver: sqlite3

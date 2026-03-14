@@ -2,27 +2,40 @@ package service
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/go-kratos/kratos/v2/log"
 	pb "github.com/yylego/kratos-examples/demo1kratos/api/student"
 	"github.com/yylego/kratos-examples/demo1kratos/internal/biz"
+	"github.com/yylego/kratos-static-auth/statickratosauth"
+	"github.com/yylego/must"
 )
 
 type StudentService struct {
 	pb.UnimplementedStudentServiceServer
 
-	uc *biz.StudentUsecase
+	uc  *biz.StudentUsecase
+	log *log.Helper
 }
 
-func NewStudentService(uc *biz.StudentUsecase) *StudentService {
-	return &StudentService{uc: uc}
+func NewStudentService(uc *biz.StudentUsecase, logger log.Logger) *StudentService {
+	return &StudentService{uc: uc, log: log.NewHelper(logger)}
 }
 
 func (s *StudentService) CreateStudent(ctx context.Context, req *pb.CreateStudentRequest) (*pb.CreateStudentReply, error) {
+	// Extract and validate role name from auth context
+	//
+	// 从认证上下文中提取并验证角色名
+	roleName, ok := statickratosauth.GetUsername(ctx)
+	must.True(ok)
+	must.Nice(roleName)
+	s.log.WithContext(ctx).Infof("CreateStudent roleName=%s", roleName)
+
 	v, ebz := s.uc.CreateStudent(ctx, nil)
 	if ebz != nil {
 		return nil, ebz.Erk
 	}
-	return &pb.CreateStudentReply{Student: &pb.StudentInfo{Id: v.ID, Name: v.Name, Age: v.Age, ClassName: v.ClassName}}, nil
+	return &pb.CreateStudentReply{Student: &pb.StudentInfo{Id: v.ID, Name: fmt.Sprintf("%s (role=%s)", v.Name, roleName), Age: v.Age, ClassName: v.ClassName}}, nil
 }
 
 func (s *StudentService) UpdateStudent(ctx context.Context, req *pb.UpdateStudentRequest) (*pb.UpdateStudentReply, error) {

@@ -1,3 +1,6 @@
+// Package server provides HTTP and gRPC with auth middleware
+//
+// Package server 提供带认证中间件的 HTTP 和 gRPC 服务
 package server
 
 import (
@@ -9,10 +12,16 @@ import (
 	"github.com/yylego/kratos-examples/demo2kratos/internal/service"
 )
 
+// NewGRPCServer creates gRPC with role-based auth middleware
+// Uses same NewRoleMiddleware as HTTP to keep auth consistent
+//
+// NewGRPCServer 创建带角色认证中间件的 gRPC 服务器
+// 与 HTTP 服务器共享相同的 NewRoleMiddleware 以保持认证一致性
 func NewGRPCServer(c *conf.Server, article *service.ArticleService, logger log.Logger) *grpc.Server {
 	var opts = []grpc.ServerOption{
 		grpc.Middleware(
 			recovery.Recovery(),
+			NewRoleMiddleware(c, logger), // Role-based auth from config // 基于配置的角色认证
 		),
 	}
 	if c.Grpc.Network != "" {

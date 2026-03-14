@@ -7,7 +7,9 @@ require (
 	github.com/go-kratos/kratos/v2 v2.9.2
 	github.com/google/wire v0.7.0
 	github.com/yylego/done v0.0.0
+	github.com/yylego/kratos-auth v0.0.1
 	github.com/yylego/kratos-ebz v0.0.0
+	github.com/yylego/kratos-static-auth v0.0.0
 	github.com/yylego/must v0.0.0
 	github.com/yylego/rese v0.0.0
 	github.com/yylego/runpath v0.0.0
@@ -32,7 +34,12 @@ require (
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/mattn/go-sqlite3 v1.14.34 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/yylego/erero v0.0.0 // indirect
 	github.com/yylego/mutexmap v0.0.0 // indirect
+	github.com/yylego/neatjson v0.0.0 // indirect
+	github.com/yylego/sure v0.0.0 // indirect
+	github.com/yylego/syntaxgo v0.0.0 // indirect
+	github.com/yylego/tern v0.0.0 // indirect
 	github.com/yylego/zaplog v0.0.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/otel v1.42.0 // indirect
