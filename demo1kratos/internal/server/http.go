@@ -4,10 +4,11 @@
 package server
 
 import (
-	"github.com/go-kratos/kratos/v2/log"
-	"github.com/go-kratos/kratos/v2/middleware"
-	"github.com/go-kratos/kratos/v2/middleware/recovery"
-	"github.com/go-kratos/kratos/v2/transport/http"
+	"log/slog"
+
+	"github.com/go-kratos/kratos/v3/middleware"
+	"github.com/go-kratos/kratos/v3/middleware/recovery"
+	"github.com/go-kratos/kratos/v3/transport/http"
 	"github.com/yylego/kratos-auth/authkratos"
 	pb "github.com/yylego/kratos-examples/demo1kratos/api/student"
 	"github.com/yylego/kratos-examples/demo1kratos/internal/conf"
@@ -16,7 +17,7 @@ import (
 	"github.com/yylego/must"
 )
 
-func NewHTTPServer(c *conf.Server, student *service.StudentService, logger log.Logger) *http.Server {
+func NewHTTPServer(c *conf.Server, student *service.StudentService, logger *slog.Logger) *http.Server {
 	var opts = []http.ServerOption{
 		http.Middleware(
 			recovery.Recovery(),
@@ -52,7 +53,7 @@ curl --location 'http://127.0.0.1:8001/v1/students' --header 'Authorization: 863
 //
 // NewRoleMiddleware 创建认证中间件，进行令牌验证和路由范围控制
 // 配置需要认证的路由并设置有效令牌
-func NewRoleMiddleware(c *conf.Server, logger log.Logger) middleware.Middleware {
+func NewRoleMiddleware(c *conf.Server, logger *slog.Logger) middleware.Middleware {
 	routeScope := authkratos.NewInclude( // Create INCLUDE mode route scope // 创建 INCLUDE 模式的路由范围
 		pb.OperationStudentServiceCreateStudent,
 		pb.OperationStudentServiceUpdateStudent,

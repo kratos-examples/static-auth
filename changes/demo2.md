@@ -5,10 +5,10 @@ Code differences compared to source project.
 ## cmd/demo2kratos/wire_gen.go (+1 -1)
 
 ```diff
-@@ -24,7 +24,7 @@
+@@ -33,7 +33,7 @@
+ 		cleanup()
  		return nil, nil, err
  	}
- 	articleUsecase := biz.NewArticleUsecase(dataData, logger)
 -	articleService := service.NewArticleService(articleUsecase)
 +	articleService := service.NewArticleService(articleUsecase, logger)
  	grpcServer := server.NewGRPCServer(confServer, articleService, logger)
@@ -28,7 +28,7 @@ Code differences compared to source project.
 +    guestToken: "61d1a2e27b734d959670112389f7b2c2"
  data:
    database:
-     driver: sqlite3
+     driver: postgres
 ```
 
 ## internal/conf/conf.pb.go (+87 -17)
@@ -246,7 +246,7 @@ Code differences compared to source project.
  package server
  
  import (
-@@ -9,10 +12,16 @@
+@@ -10,10 +13,16 @@
  	"github.com/yylego/kratos-examples/demo2kratos/internal/service"
  )
  
@@ -255,7 +255,7 @@ Code differences compared to source project.
 +//
 +// NewGRPCServer 创建带角色认证中间件的 gRPC 服务器
 +// 与 HTTP 服务器共享相同的 NewRoleMiddleware 以保持认证一致性
- func NewGRPCServer(c *conf.Server, article *service.ArticleService, logger log.Logger) *grpc.Server {
+ func NewGRPCServer(c *conf.Server, article *service.ArticleService, logger *slog.Logger) *grpc.Server {
  	var opts = []grpc.ServerOption{
  		grpc.Middleware(
  			recovery.Recovery(),
@@ -268,17 +268,18 @@ Code differences compared to source project.
 ## internal/server/http.go (+42 -0)
 
 ```diff
-@@ -1,18 +1,26 @@
+@@ -1,19 +1,27 @@
 +// Package server provides HTTP and gRPC with auth middleware
 +//
 +// Package server 提供带认证中间件的 HTTP 和 gRPC 服务
  package server
  
  import (
- 	"github.com/go-kratos/kratos/v2/log"
-+	"github.com/go-kratos/kratos/v2/middleware"
- 	"github.com/go-kratos/kratos/v2/middleware/recovery"
- 	"github.com/go-kratos/kratos/v2/transport/http"
+ 	"log/slog"
+ 
++	"github.com/go-kratos/kratos/v3/middleware"
+ 	"github.com/go-kratos/kratos/v3/middleware/recovery"
+ 	"github.com/go-kratos/kratos/v3/transport/http"
 +	"github.com/yylego/kratos-auth/authkratos"
  	pb "github.com/yylego/kratos-examples/demo2kratos/api/article"
  	"github.com/yylego/kratos-examples/demo2kratos/internal/conf"
@@ -287,7 +288,7 @@ Code differences compared to source project.
 +	"github.com/yylego/must"
  )
  
- func NewHTTPServer(c *conf.Server, article *service.ArticleService, logger log.Logger) *http.Server {
+ func NewHTTPServer(c *conf.Server, article *service.ArticleService, logger *slog.Logger) *http.Server {
  	var opts = []http.ServerOption{
  		http.Middleware(
  			recovery.Recovery(),
@@ -295,7 +296,7 @@ Code differences compared to source project.
  		),
  	}
  	if c.Http.Network != "" {
-@@ -27,4 +35,38 @@
+@@ -28,4 +36,38 @@
  	srv := http.NewServer(opts...)
  	pb.RegisterArticleServiceHTTPServer(srv, article)
  	return srv
@@ -316,7 +317,7 @@ Code differences compared to source project.
 +//
 +// NewRoleMiddleware 创建认证中间件，进行令牌验证和路由范围控制
 +// 配置需要认证的路由并设置有效令牌
-+func NewRoleMiddleware(c *conf.Server, logger log.Logger) middleware.Middleware {
++func NewRoleMiddleware(c *conf.Server, logger *slog.Logger) middleware.Middleware {
 +	routeScope := authkratos.NewInclude( // Create INCLUDE mode route scope // 创建 INCLUDE 模式的路由范围
 +		pb.OperationArticleServiceCreateArticle,
 +		pb.OperationArticleServiceUpdateArticle,
@@ -336,16 +337,16 @@ Code differences compared to source project.
  }
 ```
 
-## internal/service/article.go (+17 -4)
+## internal/service/article.go (+16 -4)
 
 ```diff
-@@ -2,27 +2,40 @@
+@@ -2,22 +2,34 @@
  
  import (
  	"context"
 +	"fmt"
++	"log/slog"
  
-+	"github.com/go-kratos/kratos/v2/log"
  	pb "github.com/yylego/kratos-examples/demo2kratos/api/article"
  	"github.com/yylego/kratos-examples/demo2kratos/internal/biz"
 +	"github.com/yylego/kratos-static-auth/statickratosauth"
@@ -357,25 +358,27 @@ Code differences compared to source project.
  
 -	uc *biz.ArticleUsecase
 +	uc  *biz.ArticleUsecase
-+	log *log.Helper
++	log *slog.Logger
  }
  
 -func NewArticleService(uc *biz.ArticleUsecase) *ArticleService {
 -	return &ArticleService{uc: uc}
-+func NewArticleService(uc *biz.ArticleUsecase, logger log.Logger) *ArticleService {
-+	return &ArticleService{uc: uc, log: log.NewHelper(logger)}
++func NewArticleService(uc *biz.ArticleUsecase, logger *slog.Logger) *ArticleService {
++	return &ArticleService{uc: uc, log: logger}
  }
  
  func (s *ArticleService) CreateArticle(ctx context.Context, req *pb.CreateArticleRequest) (*pb.CreateArticleReply, error) {
 +	// Extract and validate role name from auth context
-+	//
 +	// 从认证上下文中提取并验证角色名
 +	roleName, ok := statickratosauth.GetUsername(ctx)
 +	must.True(ok)
 +	must.Nice(roleName)
-+	s.log.WithContext(ctx).Infof("CreateArticle roleName=%s", roleName)
++	s.log.InfoContext(ctx, "CreateArticle", "roleName", roleName)
 +
- 	v, ebz := s.uc.CreateArticle(ctx, nil)
+ 	if req.Title == "" {
+ 		return nil, pb.ErrorBadParam("TITLE IS REQUIRED")
+ 	}
+@@ -32,7 +44,7 @@
  	if ebz != nil {
  		return nil, ebz.Erk
  	}
